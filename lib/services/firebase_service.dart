@@ -16,21 +16,20 @@ class FirebaseService {
     required String plantName,
     required String diseaseName,
     String? additionalInfo,
+    required String location,
+    required double temperature,
+    required double humidity,
+    required DateTime time,
   }) async {
-    // Generate unique ID for the image
     final imageId = uuid.v4();
     final fileName = path.basename(imageFile.path);
-    
-    // Create file path in Firebase Storage
     final firebasePath = 'plants/$plantName/$diseaseName/$imageId-$fileName';
-    
-    // Upload image to Firebase Storage
+
     final ref = _storage.ref().child(firebasePath);
     final uploadTask = ref.putFile(imageFile);
     final snapshot = await uploadTask;
     final downloadUrl = await snapshot.ref.getDownloadURL();
-    
-    // Store metadata in Firestore
+
     await _firestore.collection('plant_data').add({
       'plantName': plantName,
       'diseaseName': diseaseName,
@@ -39,29 +38,28 @@ class FirebaseService {
       'imagePath': firebasePath,
       'timestamp': FieldValue.serverTimestamp(),
       'downloaded': false,
+      'location': location,
+      'temperature': temperature,
+      'humidity': humidity,
+      'recordedTime': time.toIso8601String(),
     });
   }
 
   /// Gets a list of all plant data entries
   static Future<List<Map<String, dynamic>>> getAllPlantData() async {
     final snapshot = await _firestore.collection('plant_data').get();
-    return snapshot.docs.map((doc) => {
-      'id': doc.id,
-      ...doc.data(),
-    }).toList();
+    return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
   }
 
   /// Gets plant data entries that haven't been downloaded yet
   static Future<List<Map<String, dynamic>>> getNewPlantData() async {
-    final snapshot = await _firestore
-        .collection('plant_data')
-        .where('downloaded', isEqualTo: false)
-        .get();
-    
-    return snapshot.docs.map((doc) => {
-      'id': doc.id,
-      ...doc.data(),
-    }).toList();
+    final snapshot =
+        await _firestore
+            .collection('plant_data')
+            .where('downloaded', isEqualTo: false)
+            .get();
+
+    return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
   }
 
   /// Marks a plant data entry as downloaded
@@ -72,10 +70,13 @@ class FirebaseService {
   }
 
   /// Deletes a plant data entry and its associated file
-  static Future<void> deletePlantData(String documentId, String imagePath) async {
+  static Future<void> deletePlantData(
+    String documentId,
+    String imagePath,
+  ) async {
     // Delete the file from Storage
     await _storage.ref().child(imagePath).delete();
-    
+
     // Delete the document from Firestore
     await _firestore.collection('plant_data').doc(documentId).delete();
   }

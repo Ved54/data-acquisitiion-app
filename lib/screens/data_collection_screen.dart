@@ -1,3 +1,4 @@
+import 'package:data_acquisition_app/services/location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -5,6 +6,7 @@ import 'package:data_acquisition_app/services/firebase_service.dart';
 import 'package:data_acquisition_app/utils/theme.dart';
 import 'package:data_acquisition_app/widgets/loading_overlay.dart';
 import 'package:data_acquisition_app/widgets/plant_image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class DataCollectionScreen extends StatefulWidget {
   const DataCollectionScreen({Key? key}) : super(key: key);
@@ -16,13 +18,24 @@ class DataCollectionScreen extends StatefulWidget {
 class _DataCollectionScreenState extends State<DataCollectionScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+
   final plantNameController = TextEditingController();
   final diseaseNameController = TextEditingController();
   final otherInfoController = TextEditingController();
+  final manualLocationController = TextEditingController();
+  final manualTempController = TextEditingController();
+  final manualHumidityController = TextEditingController();
+  final manualTimeController = TextEditingController();
+
   File? _imageFile;
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _slideAnimation;
+  bool _atCurrentLocation = false;
+  String? _manualLocation;
+  double? _manualTemp;
+  double? _manualHumidity;
+  DateTime? _manualTime;
 
   // List of common plant types for dropdown
   final List<String> _plantTypes = [
@@ -36,6 +49,15 @@ class _DataCollectionScreenState extends State<DataCollectionScreen>
     'Other',
   ];
   String _selectedPlantType = 'Aloe Vera';
+
+  Future<void> requestLocationPermission() async {
+    var status = await Permission.location.request();
+    if (status.isGranted) {
+      print("Location permission granted.");
+    } else {
+      print("Location permission denied.");
+    }
+  }
 
   @override
   void initState() {
@@ -80,12 +102,47 @@ class _DataCollectionScreenState extends State<DataCollectionScreen>
         final diseaseName = diseaseNameController.text.trim();
         final additionalInfo = otherInfoController.text.trim();
 
+        if (!_atCurrentLocation) {
+          if (_manualLocation == null || _manualLocation!.isEmpty) {
+            throw 'Location cannot be empty';
+          }
+          if (_manualTemp == null) {
+            throw 'Temperature must be a valid number';
+          }
+          if (_manualHumidity == null) {
+            throw 'Humidity must be a valid number';
+          }
+          if (_manualTime == null) {
+            throw 'Time must be a valid date format';
+          }
+        }
+
+        final location =
+            _atCurrentLocation
+                ? await LocationService.getAddressFromPosition(
+                  await LocationService.getCurrentPosition(),
+                )
+                : _manualLocation!;
+
+        final weatherData =
+            _atCurrentLocation
+                ? await LocationService.getWeatherData(
+                  await LocationService.getCurrentPosition(),
+                )
+                : {'temperature': _manualTemp!, 'humidity': _manualHumidity!};
+
+        final time = _atCurrentLocation ? DateTime.now() : _manualTime!;
+
         // Using the service to upload data
         await FirebaseService.uploadPlantData(
           imageFile: _imageFile!,
           plantName: plantName,
           diseaseName: diseaseName,
           additionalInfo: additionalInfo,
+          location: location,
+          temperature: weatherData['temperature'],
+          humidity: weatherData['humidity'],
+          time: time,
         );
 
         // Clear form and image
@@ -96,6 +153,15 @@ class _DataCollectionScreenState extends State<DataCollectionScreen>
           }
           diseaseNameController.clear();
           otherInfoController.clear();
+          manualLocationController.clear();
+          manualTempController.clear();
+          manualHumidityController.clear();
+          manualTimeController.clear();
+
+          _manualLocation = null;
+          _manualTemp = null;
+          _manualHumidity = null;
+          _manualTime = null;
         });
 
         // Show success message
@@ -141,6 +207,11 @@ class _DataCollectionScreenState extends State<DataCollectionScreen>
     plantNameController.dispose();
     diseaseNameController.dispose();
     otherInfoController.dispose();
+    _animationController.dispose();
+    manualLocationController.dispose();
+    manualTempController.dispose();
+    manualHumidityController.dispose();
+    manualTimeController.dispose();
     _animationController.dispose();
     super.dispose();
   }
@@ -310,6 +381,110 @@ class _DataCollectionScreenState extends State<DataCollectionScreen>
                                 ),
                                 maxLines: 3,
                               ),
+                              const SizedBox(height: 16.0),
+
+                              SwitchListTile(
+                                title: const Text(
+                                  "Are you at the plant's location?",
+                                ),
+                                value: _atCurrentLocation,
+                                onChanged: (val) async {
+                                  setState(() {
+                                    _atCurrentLocation = val;
+                                  });
+                                  if (val) {
+                                    await requestLocationPermission();
+                                  }
+                                },
+                              ),
+
+                              if (!_atCurrentLocation) ...[
+                                const SizedBox(height: 10.0),
+
+                                TextFormField(
+                                  controller: manualLocationController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Location (City, State)',
+                                    prefixIcon: Icon(
+                                      Icons.location_on_rounded,
+                                      color: AppTheme.accentColor,
+                                    ),
+                                  ),
+                                  onChanged: (val) => _manualLocation = val,
+                                  validator:
+                                      (val) =>
+                                          val == null || val.isEmpty
+                                              ? 'Please enter location'
+                                              : null,
+                                ),
+                                const SizedBox(height: 16.0),
+
+                                TextFormField(
+                                  controller: manualTempController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Temperature (°C)',
+                                    prefixIcon: Icon(
+                                      Icons.thermostat,
+                                      color: AppTheme.accentColor,
+                                    ),
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged:
+                                      (val) =>
+                                          _manualTemp = double.tryParse(val),
+                                  validator:
+                                      (val) =>
+                                          val == null ||
+                                                  double.tryParse(val) == null
+                                              ? 'Enter valid temperature'
+                                              : null,
+                                ),
+                                const SizedBox(height: 16.0),
+
+                                TextFormField(
+                                  controller: manualHumidityController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Humidity (%)',
+                                    prefixIcon: Icon(
+                                      Icons.sunny,
+                                      color: AppTheme.accentColor,
+                                    ),
+                                  ),
+                                  keyboardType: TextInputType.number,
+                                  onChanged:
+                                      (val) =>
+                                          _manualHumidity = double.tryParse(
+                                            val,
+                                          ),
+                                  validator:
+                                      (val) =>
+                                          val == null ||
+                                                  double.tryParse(val) == null
+                                              ? 'Enter valid humidity'
+                                              : null,
+                                ),
+                                const SizedBox(height: 16.0),
+
+                                TextFormField(
+                                  controller: manualTimeController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Time (yyyy-MM-dd HH:mm)',
+                                    prefixIcon: Icon(
+                                      Icons.timer,
+                                      color: AppTheme.accentColor,
+                                    ),
+                                  ),
+                                  onChanged:
+                                      (val) =>
+                                          _manualTime = DateTime.tryParse(val),
+                                  validator:
+                                      (val) =>
+                                          DateTime.tryParse(val ?? '') == null
+                                              ? 'Enter valid time'
+                                              : null,
+                                ),
+                              ],
+
                               const SizedBox(height: 24.0),
 
                               // Submit button
