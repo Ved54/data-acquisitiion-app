@@ -1,16 +1,61 @@
-# data_acquisition_app
+# Data Acquisition App
 
-A new Flutter project.
+This app is developed for collecting diseased plant data like image, plant name, disease name, plant location, temperature and humidity of that location and time. This data will be used for research purpose.
 
-## Getting Started
+## 🎮 Features
 
-This project is a starting point for a Flutter application.
+- Modern UI
+- Proper Instructions
+- Firebase integration for data storage
 
-A few resources to get you started if this is your first Flutter project:
+## 🚀 Getting Started
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Prerequisites
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- Flutter SDK
+- Dart SDK (^3.7.2)
+- Firebase project setup
+- Android Studio / Xcode (for mobile development)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Ved54/data-acquisitiion-app.git
+```
+
+2. Navigate to the project directory:
+```bash
+cd data-acquisitiion-app
+```
+
+3. Install dependencies:
+```bash
+flutter pub get
+```
+
+4. Configure Firebase:
+   - Add your Firebase configuration files
+   - Enable Firebase Storage and Firestore database in Firebase Console
+
+5. Run the app:
+```bash
+flutter run
+```
+
+## 📱 Platform Support
+
+- iOS
+- Android
+
+## 🔧 Development
+
+This project uses Flutter's latest features and follows best practices for mobile app development. The codebase is structured for maintainability and scalability.
+
+## 🤝 Contributing
+
+Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
+
+## 📞 Contact
+
+For any queries or support, please reach out to vedant.vaidya24@spit.ac.in
