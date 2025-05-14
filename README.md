@@ -5,9 +5,9 @@ This app is developed for collecting diseased plant data like image, plant name,
 ## 📸 App Screenshots
 
 <p align="center">
-  <img src="screenshots/screen1.png" alt="Home Screen" height="250"/>
-  <img src="screenshots/screen2.png" alt="Form Screen" height="250"/>
-  <img src="screenshots/screen3.png" alt="Success Screen" height="250"/>
+  <img src="screenshots/screen1.jpeg" alt="Home Screen" width="270"/>
+  <img src="screenshots/screen2.jpeg" alt="Form Screen" width="270"/>
+  <img src="screenshots/screen3.jpeg" alt="Success Screen" width="270"/>
 </p>
 
 ## 🎮 Features
